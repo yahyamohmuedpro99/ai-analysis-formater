@@ -14,13 +14,7 @@ app = FastAPI(title="AI Text Analysis API", version="1.0.0")
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://localhost:3001",  # Alternative dev port
-        "http://127.0.0.1:3000",  # Alternative localhost
-        "http://127.0.0.1:3001",
-        "http://localhost:3000",  # Explicit for HTTPS if needed
-    ],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=[
