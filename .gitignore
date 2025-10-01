@@ -137,3 +137,32 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+serviceAccountKey.json
+
+
+# Credentials - NEVER COMMIT THESE
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+serviceAccountKey.json
+kai-developer-test-*.json
+.env
+.env.local
+.env*.local
+
+# Dependencies
+node_modules/
+__pycache__/
+venv/
+*.pyc
+
+# Build outputs
+.next/
+dist/
+build/
+.firebase/
+
+# OS files
+.DS_Store
+Thumbs.db
