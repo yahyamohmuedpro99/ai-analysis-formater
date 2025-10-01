@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, getIdToken } from 'firebase/auth';
+import { onAuthStateChanged, onIdTokenChanged, getIdToken } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import TextSubmissionForm from '../../components/TextSubmissionForm';
 import JobList from '../../components/JobList';
@@ -14,18 +14,35 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // Listen for authentication state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
         const token = await getIdToken(user);
         setIdToken(token);
         setLoading(false);
       } else {
+        setUser(null);
+        setIdToken('');
+        setLoading(false);
         router.push('/login');
       }
     });
 
-    return unsubscribe;
+    // Listen for token changes (refreshes tokens automatically)
+    const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        const token = await getIdToken(user);
+        setIdToken(token);
+      } else {
+        setIdToken('');
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeToken();
+    };
   }, [router]);
 
   const handleAnalysisSubmitted = () => {
@@ -53,7 +70,7 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 AI Text Analysis
               </h1>
-              <p className="text-slate-600 font-medium">Welcome back, {user.displayName || user.email?.split('@')[0]}</p>
+              <p className="text-slate-600 font-medium">Welcome back, {user?.displayName || user?.email?.split('@')[0] || 'User'}</p>
             </div>
           </div>
           <button
@@ -67,12 +84,16 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto py-12 sm:px-6 lg:px-8">
         <div className="px-4 py-8 sm:px-0 space-y-12">
-          <TextSubmissionForm
-            userId={user.uid}
-            idToken={idToken}
-            onAnalysisSubmitted={handleAnalysisSubmitted}
-          />
-          <JobList userId={user.uid} idToken={idToken} />
+          {user && (
+            <>
+              <TextSubmissionForm
+                userId={user.uid}
+                idToken={idToken}
+                onAnalysisSubmitted={handleAnalysisSubmitted}
+              />
+              <JobList userId={user.uid} idToken={idToken} />
+            </>
+          )}
         </div>
       </main>
     </div>

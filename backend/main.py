@@ -14,18 +14,10 @@ app = FastAPI(title="AI Text Analysis API", version="1.0.0")
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=["http://localhost:3000", "http://localhost:3001",os.getenv('FRONTEND_URL')],  # Specific origins
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "authorization",
-        "content-type",
-        "accept",
-        "origin",
-        "user-agent",
-        "accept-encoding",
-        "accept-language"
-    ],
+    allow_headers=["*"],
 )
 
 # Health check endpoint
@@ -33,10 +25,7 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy"}
 
-# Handle CORS preflight requests
-@app.options("/api/{path:path}")
-async def preflight_handler(path: str):
-    return {"message": "OK"}
+# CORS is handled by middleware - no need for manual OPTIONS handlers
 
 # Protected endpoint to analyze text
 @app.post("/api/analyze")

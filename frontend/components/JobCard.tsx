@@ -7,6 +7,7 @@ interface JobCardProps {
 
 export default function JobCard({ job }: JobCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showAllKeywords, setShowAllKeywords] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -145,23 +146,28 @@ export default function JobCard({ job }: JobCardProps) {
             </div>
 
             <div className="bg-white p-6 rounded-xl border-2 border-slate-200 shadow-md hover:shadow-lg transition-all duration-300">
-              <div className="flex items-center mb-3">
-                <div className="w-6 h-6 bg-purple-600 rounded-lg flex items-center justify-center mr-2">
-                  <span className="text-white text-xs">🏷️</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="w-6 h-6 bg-purple-600 rounded-lg flex items-center justify-center mr-2">
+                    <span className="text-white text-xs">🏷️</span>
+                  </div>
+                  <p className="text-slate-700 font-bold text-base">Keywords</p>
                 </div>
-                <p className="text-slate-700 font-bold text-base">Keywords</p>
+                {job.result.keywords.length > 6 && (
+                  <button
+                    onClick={() => setShowAllKeywords(!showAllKeywords)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                  >
+                    {showAllKeywords ? 'Show Less' : `Show ${job.result.keywords.length - 6} More`}
+                  </button>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {job.result.keywords.slice(0, 6).map((keyword, index) => (
+                {(showAllKeywords ? job.result.keywords : job.result.keywords.slice(0, 6)).map((keyword, index) => (
                   <span key={index} className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 hover:from-blue-200 hover:to-purple-200 transition-all duration-200 border border-blue-200">
                     {keyword}
                   </span>
                 ))}
-                {job.result.keywords.length > 6 && (
-                  <span className="text-sm text-slate-500 px-3 py-1 font-medium">
-                    +{job.result.keywords.length - 6} more
-                  </span>
-                )}
               </div>
             </div>
           </div>
