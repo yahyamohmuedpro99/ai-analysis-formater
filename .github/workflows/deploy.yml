@@ -8,13 +8,37 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - '.github/workflows/**'
+  workflow_dispatch: {} # allow manual runs for testing
 
 jobs:
+  # 1) fast filter job to detect which part changed
+  filter:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - id: filter
+        name: Filter changed paths
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  # 2) Deploy backend only if backend changed
   deploy-backend:
     name: Deploy Backend to Cloud Run
+    needs: filter
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'backend/') || contains(github.event.head_commit.added, 'backend/')
-    
+    if: ${{ needs.filter.outputs.backend == 'true' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -47,11 +71,13 @@ jobs:
             --memory=512Mi \
             --timeout=300
 
+  # 3) Deploy frontend only if frontend changed
   deploy-frontend:
     name: Deploy Frontend to Firebase Hosting
+    needs: filter
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'frontend/') || contains(github.event.head_commit.added, 'frontend/')
-    
+    if: ${{ needs.filter.outputs.frontend == 'true' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
