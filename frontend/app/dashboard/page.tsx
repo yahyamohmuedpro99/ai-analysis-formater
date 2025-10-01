@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, getIdToken } from 'firebase/auth';
+import { onAuthStateChanged, getIdToken, User } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import TextSubmissionForm from '../../components/TextSubmissionForm';
 import JobList from '../../components/JobList';
 
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
-  const [idToken, setIdToken] = useState('');
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -17,8 +16,6 @@ export default function Dashboard() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        const token = await getIdToken(user);
-        setIdToken(token);
         setLoading(false);
       } else {
         router.push('/login');
@@ -53,7 +50,7 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 AI Text Analysis
               </h1>
-              <p className="text-slate-600 font-medium">Welcome back, {user.displayName || user.email?.split('@')[0]}</p>
+              <p className="text-slate-600 font-medium">Welcome back, {user?.displayName || user?.email?.split('@')[0]}</p>
             </div>
           </div>
           <button
@@ -68,11 +65,10 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto py-12 sm:px-6 lg:px-8">
         <div className="px-4 py-8 sm:px-0 space-y-12">
           <TextSubmissionForm
-            userId={user.uid}
-            idToken={idToken}
+            userId={user!.uid}
             onAnalysisSubmitted={handleAnalysisSubmitted}
           />
-          <JobList userId={user.uid} idToken={idToken} />
+          <JobList userId={user!.uid} />
         </div>
       </main>
     </div>

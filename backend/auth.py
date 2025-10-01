@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import auth
 from fastapi import HTTPException, Request
-import os
+import time
 
 async def verify_firebase_token(request: Request) -> str:
     """
@@ -22,6 +22,9 @@ async def verify_firebase_token(request: Request) -> str:
         decoded_token = auth.verify_id_token(token)
         print(f"DEBUG: Token verified successfully for user: {decoded_token['uid']}")
         return decoded_token['uid']
+    except auth.ExpiredIdTokenError:
+        print(f"DEBUG: Token verification failed: Token expired")
+        raise HTTPException(status_code=401, detail="Authentication token has expired. Please sign in again.")
     except Exception as e:
         print(f"DEBUG: Token verification failed: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Invalid authentication token: {str(e)}")
@@ -33,5 +36,7 @@ def get_user_id_from_token(token: str) -> str:
     try:
         decoded_token = auth.verify_id_token(token)
         return decoded_token['uid']
+    except auth.ExpiredIdTokenError:
+        raise HTTPException(status_code=401, detail="Authentication token has expired. Please sign in again.")
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid authentication token: {str(e)}")

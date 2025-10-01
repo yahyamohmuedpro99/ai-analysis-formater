@@ -2,14 +2,15 @@
 
 import React, { useState } from 'react';
 import { analyzeText } from '../lib/api';
+import { auth } from '../lib/firebase';
+import { getIdToken } from 'firebase/auth';
 
 interface TextSubmissionFormProps {
   userId: string;
-  idToken: string;
   onAnalysisSubmitted: () => void;
 }
 
-export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitted }: TextSubmissionFormProps) {
+export default function TextSubmissionForm({ userId, onAnalysisSubmitted }: TextSubmissionFormProps) {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -22,8 +23,8 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
       return;
     }
     
-    if (text.length > 5000) {
-      setError('Text exceeds maximum length of 5000 characters');
+    if (text.length > 20000) {
+      setError('Text exceeds maximum length of 20000 characters');
       return;
     }
     
@@ -31,11 +32,22 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
     setError('');
     
     try {
-      await analyzeText(text, idToken);
+      // Get a fresh ID token before each request
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const token = await getIdToken(user);
+      await analyzeText(text, token);
       setText('');
       onAnalysisSubmitted();
-    } catch (err) {
-      setError('Failed to submit text for analysis. Please try again.');
+    } catch (err: any) {
+      if (err.message && err.message.includes('Authentication failed')) {
+        setError('Your session has expired. Please sign in again.');
+      } else {
+        setError('Failed to submit text for analysis. Please try again.');
+      }
       console.error('Analysis error:', err);
     } finally {
       setIsSubmitting(false);
@@ -65,8 +77,8 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
             placeholder="Enter or paste your text here for AI-powered analysis..."
             className={`w-full h-52 p-5 border-2 rounded-xl resize-none transition-all duration-300 text-base ${
               isSubmitting
-                ? 'border-slate-200 bg-slate-50 cursor-not-allowed text-slate-400'
-                : 'border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 hover:border-slate-400'
+                ? 'border-slate-200 bg-slate-50 cursor-not-allowed text-gray-500'
+                : 'border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 hover:border-slate-400 text-gray-800'
             }`}
             disabled={isSubmitting}
           />
@@ -77,11 +89,11 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
               AI-powered analysis includes sentiment, keywords, and summaries
             </div>
             <div className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
-              text.length > 4500 ? 'bg-red-100 text-red-700' :
-              text.length > 4000 ? 'bg-yellow-100 text-yellow-700' :
+              text.length > 18000 ? 'bg-red-100 text-red-700' :
+              text.length > 15000 ? 'bg-yellow-100 text-yellow-700' :
               'bg-slate-100 text-slate-600'
             }`}>
-              {text.length}/5000
+              {text.length}/20000
             </div>
           </div>
         </div>

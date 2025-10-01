@@ -1,12 +1,39 @@
 import React, { useState } from 'react';
-import { Job } from '../lib/api';
+import { Job, deleteJob } from '../lib/api';
+import { auth } from '../lib/firebase';
+import { getIdToken } from 'firebase/auth';
 
 interface JobCardProps {
   job: Job;
+  onDelete: (jobId: string) => void;
 }
 
-export default function JobCard({ job }: JobCardProps) {
+export default function JobCard({ job, onDelete }: JobCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this job?')) {
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const token = await getIdToken(user);
+      await deleteJob(job.id, token);
+      onDelete(job.id);
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      alert('Failed to delete job. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -56,14 +83,14 @@ export default function JobCard({ job }: JobCardProps) {
   };
 
   return (
-    <div className={`border-2 ${getStatusColor(job.status)} rounded-2xl p-8 mb-8 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white`}>
+    <div className={`border-2 ${getStatusColor(job.status)} rounded-xl p-5 mb-5 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 bg-white`}>
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center space-x-4">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg ${getStatusColor(job.status)}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shadow ${getStatusColor(job.status)}`}>
             {getStatusIcon(job.status)}
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-slate-800 mb-1">
+            <h3 className="text-lg font-bold text-slate-800 mb-1">
               "{getJobTitle(job.text)}"
             </h3>
             <div className="flex items-center space-x-6 text-sm font-medium text-slate-500">
@@ -80,9 +107,18 @@ export default function JobCard({ job }: JobCardProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold shadow-md ${getStatusColor(job.status)}`}>
-            <span className="mr-2 text-base">{getStatusIcon(job.status)}</span>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={handleDelete}
+            className="text-red-500 hover:text-red-700 transition-colors"
+            title="Delete job"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold shadow ${getStatusColor(job.status)}`}>
+            <span className="mr-1 text-sm">{getStatusIcon(job.status)}</span>
             {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
           </span>
         </div>
@@ -93,34 +129,34 @@ export default function JobCard({ job }: JobCardProps) {
           <h4 className="text-gray-700 font-medium">Original Text</h4>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+            className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
           >
             {isExpanded ? 'Show Less' : 'Show More'}
           </button>
         </div>
-        <div className={`text-gray-600 transition-all duration-300 ${isExpanded ? '' : 'line-clamp-3'}`}>
-          {isExpanded ? job.text : truncateText(job.text)}
+        <div className={`text-gray-600 transition-all duration-300 text-sm ${isExpanded ? '' : 'line-clamp-3'}`}>
+          {isExpanded ? job.text : truncateText(job.text, 150)}
         </div>
       </div>
 
       {job.status === 'completed' && job.result && (
-        <div className="mt-8 p-6 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 shadow-lg">
-          <div className="flex items-center mb-6">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
-              <span className="text-white text-base">📊</span>
+        <div className="mt-5 p-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow">
+          <div className="flex items-center mb-4">
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-2 shadow">
+              <span className="text-white text-xs">📊</span>
             </div>
-            <h4 className="text-2xl font-bold text-slate-800">Analysis Results</h4>
+            <h4 className="text-lg font-bold text-slate-800">Analysis Results</h4>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl border-2 border-slate-200 shadow-md hover:shadow-lg transition-all duration-300">
-              <div className="flex items-center mb-3">
-                <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center mr-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow hover:shadow transition-all duration-200">
+              <div className="flex items-center mb-2">
+                <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center mr-2">
                   <span className="text-white text-xs">📝</span>
                 </div>
-                <p className="text-slate-700 font-bold text-base">Summary</p>
+                <p className="text-slate-700 font-bold text-sm">Summary</p>
               </div>
-              <p className="text-slate-600 text-sm leading-relaxed">{job.result.summary}</p>
+              <p className="text-slate-600 text-xs leading-relaxed">{job.result.summary}</p>
             </div>
 
             <div className="bg-white p-6 rounded-xl border-2 border-slate-200 shadow-md hover:shadow-lg transition-all duration-300">

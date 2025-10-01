@@ -23,6 +23,7 @@ export interface Job {
 
 export interface JobsResponse {
   jobs: Job[];
+  total: number;
 }
 
 export async function analyzeText(text: string, token: string): Promise<{ jobId: string }> {
@@ -60,9 +61,42 @@ export async function analyzeText(text: string, token: string): Promise<{ jobId:
   }
 }
 
-export async function getUserJobs(userId: string, token: string): Promise<JobsResponse> {
+export async function deleteJob(jobId: string, token: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/jobs/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication failed. Please log in again.");
+      } else if (response.status === 403) {
+        throw new Error("Access denied. You don't have permission to delete this job.");
+      } else if (response.status >= 500) {
+        throw new Error("Server error. Please try again later.");
+      } else {
+        throw new Error(`Failed to delete job: ${response.statusText}`);
+      }
+    }
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Cannot connect to server at ${API_BASE_URL}. Please check if the server is running.`);
+    }
+    throw error;
+  }
+}
+
+export async function getUserJobs(userId: string, token: string, page: number = 1, limit: number = 10, search: string = ''): Promise<JobsResponse> {
+  try {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    if (search) params.append('search', search);
+    
+    const response = await fetch(`${API_BASE_URL}/api/jobs/${userId}?${params.toString()}`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }
