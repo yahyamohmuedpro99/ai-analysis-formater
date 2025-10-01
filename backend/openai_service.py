@@ -16,7 +16,7 @@ def analyze_text(text: str) -> TextAnalysisResponse:
     """
     try:
         response = client.beta.chat.completions.parse(
-            model="gpt-4o-2024-08-06",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that analyzes text and provides structured output."},
                 {"role": "user", "content": f"Analyze the following text and provide a structured response with summary, sentiment, and keywords:\n\n{text}"}

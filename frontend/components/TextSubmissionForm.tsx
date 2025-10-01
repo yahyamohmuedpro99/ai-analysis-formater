@@ -22,8 +22,8 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
       return;
     }
     
-    if (text.length > 5000) {
-      setError('Text exceeds maximum length of 5000 characters');
+    if (text.length > 20000) {
+      setError('Text exceeds maximum length of 20000 characters');
       return;
     }
     
@@ -81,7 +81,7 @@ export default function TextSubmissionForm({ userId, idToken, onAnalysisSubmitte
               text.length > 4000 ? 'bg-yellow-100 text-yellow-700' :
               'bg-slate-100 text-slate-600'
             }`}>
-              {text.length}/5000
+              {text.length}/20000
             </div>
           </div>
         </div>

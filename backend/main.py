@@ -48,8 +48,8 @@ async def analyze_text_endpoint(
     print(f"DEBUG: Received analysis request from user: {user_id}")
     print(f"DEBUG: Text length: {len(request.text)}")
     # Validate text length
-    if len(request.text) > 5000:
-        raise HTTPException(status_code=400, detail="Text exceeds maximum length of 5000 characters")
+    if len(request.text) > 20000:
+        raise HTTPException(status_code=400, detail="Text exceeds maximum length of 20000 characters")
     
     # Create a new job document
     job_data = {
