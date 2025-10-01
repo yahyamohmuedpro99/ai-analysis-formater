@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - ~/.gcloud/your-service-account.json:/run/secrets/google/key.json:ro
+    entrypoint: /bin/sh -c "export GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/google/key.json && gunicorn --bind :8000 main:app"
