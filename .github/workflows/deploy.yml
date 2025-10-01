@@ -122,3 +122,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           channelId: live
           projectId: kai-developer-test
+          entrypoint: ./frontend
