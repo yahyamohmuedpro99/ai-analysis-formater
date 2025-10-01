@@ -2,55 +2,47 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, onIdTokenChanged, getIdToken } from 'firebase/auth';
+import { onIdTokenChanged, getIdToken } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useAuth } from '../../components/AuthProvider';
 import TextSubmissionForm from '../../components/TextSubmissionForm';
 import JobList from '../../components/JobList';
 
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
   const [idToken, setIdToken] = useState('');
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Listen for authentication state changes
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const token = await getIdToken(user);
-        setIdToken(token);
-        setLoading(false);
-      } else {
-        setUser(null);
-        setIdToken('');
-        setLoading(false);
+    if (!authLoading) {
+      if (!user) {
         router.push('/login');
+        return;
       }
-    });
 
-    // Listen for token changes (refreshes tokens automatically)
-    const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
-      if (user) {
-        const token = await getIdToken(user);
-        setIdToken(token);
-      } else {
-        setIdToken('');
-      }
-    });
+      // Listen for token changes (refreshes tokens automatically)
+      const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
+        if (user) {
+          const token = await getIdToken(user);
+          setIdToken(token);
+        } else {
+          setIdToken('');
+        }
+      });
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeToken();
-    };
-  }, [router]);
+      // Get initial token
+      getIdToken(user).then(setIdToken);
+
+      return unsubscribeToken;
+    }
+  }, [user, authLoading, router]);
 
   const handleAnalysisSubmitted = () => {
     // Refresh jobs list after submission
     // The JobList component already has polling, so this is just for immediate feedback
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
