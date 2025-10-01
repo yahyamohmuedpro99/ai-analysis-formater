@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("kai-developer-test-6efb8748cb64.json")
+cred = credentials.Certificate('kai-developer-test-6efb8748cb64.json')
 
 firebase_app = firebase_admin.initialize_app(cred)
 

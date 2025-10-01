@@ -1,0 +1,89 @@
+name: Deploy to Firebase and Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/**'
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend to Cloud Run
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'backend/') || contains(github.event.head_commit.added, 'backend/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Build and push Docker image
+        run: |
+          cd backend
+          gcloud builds submit --tag gcr.io/kai-developer-test/kai-backend
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy kai-backend \
+            --image gcr.io/kai-developer-test/kai-backend \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --set-env-vars FIRESTORE_DATABASE_ID=${{ secrets.FIRESTORE_DATABASE_ID }} \
+            --set-env-vars PROJECT_ID=kai-developer-test \
+            --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
+            --service-account=firebase-adminsdk-fbsvc@kai-developer-test.iam.gserviceaccount.com \
+            --max-instances=10 \
+            --memory=512Mi \
+            --timeout=300
+
+  deploy-frontend:
+    name: Deploy Frontend to Firebase Hosting
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'frontend/') || contains(github.event.head_commit.added, 'frontend/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Next.js app
+        run: |
+          cd frontend
+          npm run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: kai-developer-test.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: kai-developer-test
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: kai-developer-test.firebasestorage.app
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 320177389465
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:320177389465:web:23619186ec45c714b7dd08
+          NEXT_PUBLIC_API_URL: https://kai-backend-xxxxx-uc.a.run.app
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          channelId: live
+          projectId: kai-developer-test
+          entryPoint: ./frontend

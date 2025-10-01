@@ -1,48 +1,29 @@
 #!/bin/bash
 
-# Exit on any error
-set -e
-
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-echo -e "${YELLOW}Starting backend deployment to Cloud Run...${NC}"
-
-# Check if required environment variables are set
-if [[ -z "$GOOGLE_CLOUD_PROJECT" ]]; then
-    echo -e "${RED}Error: GOOGLE_CLOUD_PROJECT environment variable is not set${NC}"
-    exit 1
-fi
-
-if [[ -z "$SERVICE_ACCOUNT" ]]; then
-    echo -e "${RED}Error: SERVICE_ACCOUNT environment variable is not set${NC}"
-    exit 1
-fi
-
-# Set variables
-SERVICE_NAME="ai-analysis-backend"
+# Configuration
+PROJECT_ID="kai-developer-test"
+SERVICE_NAME="kai-backend"
 REGION="us-central1"
+IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 
-echo -e "${YELLOW}Building Docker image...${NC}"
-# Build the Docker image
-docker build -t gcr.io/$GOOGLE_CLOUD_PROJECT/$SERVICE_NAME .
+# Build and push Docker image
+echo "Building Docker image..."
+gcloud builds submit --tag ${IMAGE_NAME}
 
-echo -e "${YELLOW}Pushing Docker image to Google Container Registry...${NC}"
-# Push the Docker image to Google Container Registry
-docker push gcr.io/$GOOGLE_CLOUD_PROJECT/$SERVICE_NAME
-
-echo -e "${YELLOW}Deploying to Cloud Run...${NC}"
 # Deploy to Cloud Run
-gcloud run deploy $SERVICE_NAME \
-    --image gcr.io/$GOOGLE_CLOUD_PROJECT/$SERVICE_NAME \
-    --platform managed \
-    --region $REGION \
-    --allow-unauthenticated \
-    --service-account $SERVICE_ACCOUNT \
-    --port 8000 \
-    --set-env-vars FIRESTORE_DATABASE_ID=${FIRESTORE_DATABASE_ID:-"default"}
+echo "Deploying to Cloud Run..."
+gcloud run deploy ${SERVICE_NAME} \
+  --image ${IMAGE_NAME} \
+  --platform managed \
+  --region ${REGION} \
+  --allow-unauthenticated \
+  --set-env-vars FIRESTORE_DATABASE_ID=yahya-database \
+  --set-env-vars PROJECT_ID=${PROJECT_ID} \
+  --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
+  --service-account=firebase-adminsdk-fbsvc@kai-developer-test.iam.gserviceaccount.com \
+  --max-instances=10 \
+  --memory=512Mi \
+  --timeout=300
 
-echo -e "${GREEN}Deployment completed successfully!${NC}"
+echo "Deployment complete!"
+gcloud run services describe ${SERVICE_NAME} --region ${REGION} --format='value(status.url)'
