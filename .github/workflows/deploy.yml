@@ -8,10 +8,10 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - '.github/workflows/**'
-  workflow_dispatch: {} # allow manual runs for testing
+  workflow_dispatch: {} # manual runs allowed
 
 jobs:
-  # 1) fast filter job to detect which part changed
+  # Detect which parts changed
   filter:
     name: Detect changed paths
     runs-on: ubuntu-latest
@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - id: filter
         name: Filter changed paths
@@ -32,55 +34,63 @@ jobs:
             frontend:
               - 'frontend/**'
 
-  # 2) Deploy backend only if backend changed
+  # Deploy backend (only if backend changed)
   deploy-backend:
     name: Deploy Backend to Cloud Run
     needs: filter
     runs-on: ubuntu-latest
     if: ${{ needs.filter.outputs.backend == 'true' }}
-
+    env:
+      PROJECT_ID: kai-developer-test
+      IMAGE: gcr.io/kai-developer-test/kai-backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud (using service account JSON in secret)
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image to Container Registry
         run: |
           cd backend
-          gcloud builds submit --tag gcr.io/kai-developer-test/kai-backend
+          # Build and push image to GCR
+          gcloud builds submit --tag $IMAGE
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (container listens on port 8000)
         run: |
           gcloud run deploy kai-backend \
-            --image gcr.io/kai-developer-test/kai-backend \
+            --image $IMAGE \
             --platform managed \
             --region us-central1 \
+            --port=8000 \
             --allow-unauthenticated \
-            --set-env-vars FIRESTORE_DATABASE_ID=${{ secrets.FIRESTORE_DATABASE_ID }} \
-            --set-env-vars PROJECT_ID=kai-developer-test \
+            --set-env-vars FIRESTORE_DATABASE_ID=${{ secrets.FIRESTORE_DATABASE_ID }},PROJECT_ID=${{ env.PROJECT_ID }} \
             --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
             --service-account=firebase-adminsdk-fbsvc@kai-developer-test.iam.gserviceaccount.com \
             --max-instances=10 \
             --memory=512Mi \
             --timeout=300
 
-  # 3) Deploy frontend only if frontend changed
+  # Deploy frontend (only if frontend changed)
   deploy-frontend:
     name: Deploy Frontend to Firebase Hosting
     needs: filter
     runs-on: ubuntu-latest
     if: ${{ needs.filter.outputs.frontend == 'true' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
