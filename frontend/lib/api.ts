@@ -98,7 +98,7 @@ export async function getUserJobs(userId: string, token: string, page: number = 
     params.append('page', page.toString());
     params.append('limit', limit.toString());
     if (search) params.append('search', search);
-    
+
     const response = await fetch(`${API_BASE_URL}/api/jobs/${userId}?${params.toString()}`, {
       headers: {
         "Authorization": `Bearer ${token}`
@@ -114,6 +114,37 @@ export async function getUserJobs(userId: string, token: string, page: number = 
         throw new Error("Server error. Please try again later.");
       } else {
         throw new Error(`Failed to fetch jobs: ${response.statusText}`);
+      }
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Cannot connect to server at ${API_BASE_URL}. Please check if the server is running.`);
+    }
+    throw error;
+  }
+}
+
+export async function getSingleJob(jobId: string, token: string): Promise<Job> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/job/${jobId}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication failed. Please log in again.");
+      } else if (response.status === 403) {
+        throw new Error("Access denied. You don't have permission to view this job.");
+      } else if (response.status === 404) {
+        throw new Error("Job not found.");
+      } else if (response.status >= 500) {
+        throw new Error("Server error. Please try again later.");
+      } else {
+        throw new Error(`Failed to fetch job: ${response.statusText}`);
       }
     }
 

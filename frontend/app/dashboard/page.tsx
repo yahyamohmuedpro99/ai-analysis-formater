@@ -123,7 +123,7 @@ export default function Dashboard() {
               <div>
                 <div className="bg-white rounded-lg shadow p-6 border border-slate-200 sticky top-24 dark:bg-slate-800 dark:border-slate-700 backdrop-blur-sm">
                   <h2 className="text-xl font-bold mb-4 dark:text-slate-100">How It Works</h2>
-              s    <div className="space-y-4">
+                   <div className="space-y-4">
                     <div className="flex items-start">
                       <div className="flex-shrink-0 h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 dark:bg-purple-900/50">
                         <span className="text-purple-600 font-bold dark:text-purple-400">1</span>

@@ -19,8 +19,7 @@ app/
 ├── page.tsx            # Main analysis page
 ├── loading.tsx         # Loading state skeleton
 ├── analysis/
-│   └── [id]/
-│       └── page.tsx    # Individual analysis detail page
+│   └── page.tsx        # Individual analysis detail page (uses query params)
 components/
 ├── ui/                 # shadcn/ui components
 ├── header.tsx          # Header component

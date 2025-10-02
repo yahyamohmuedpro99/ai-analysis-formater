@@ -115,30 +115,79 @@ NEXT_PUBLIC_API_BASE_URL=your_backend_url
 
 ## Deployment
 
-### Backend Deployment (Cloud Run)
+### Quick Deploy (All-in-One)
 
-1. Make sure you have the Google Cloud SDK installed and authenticated
-2. Set the required environment variables:
+Deploy both backend and frontend with a single command:
+
+#### Windows (PowerShell):
+```powershell
+# Set your OpenAI API key
+$env:OPENAI_API_KEY = "your-openai-api-key-here"
+
+# Run deployment
+.\deploy_all.ps1
+```
+
+#### Linux/Mac (Bash):
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY="your-openai-api-key-here"
+
+# Make script executable
+chmod +x deploy_all.sh
+
+# Run deployment
+./deploy_all.sh
+```
+
+The script will:
+1. ✅ Build and deploy backend to Cloud Run
+2. ✅ Capture the backend URL automatically
+3. ✅ Update frontend `.env.local` with the backend URL
+4. ✅ Build and deploy frontend to Firebase Hosting
+
+---
+
+### Manual Deployment
+
+#### Backend Deployment (Cloud Run)
+
+1. Navigate to backend directory:
    ```bash
-   export GOOGLE_CLOUD_PROJECT=your_project_id
-   export SERVICE_ACCOUNT=your_service_account
-   export FIRESTORE_DATABASE_ID=your_database_name
-   ```
-3. Run the deployment script:
-   ```bash
-   ./deploy.sh
+   cd backend
    ```
 
-### Frontend Deployment (Firebase Hosting)
+2. Set environment variable:
+   ```powershell
+   # Windows PowerShell
+   $env:OPENAI_API_KEY = "your-api-key"
 
-1. Make sure you have the Firebase CLI installed and authenticated
-2. Set the required environment variable:
-   ```bash
-   export FIREBASE_PROJECT=your_firebase_project_id
+   # Linux/Mac
+   export OPENAI_API_KEY="your-api-key"
    ```
-3. Run the deployment script:
+
+3. Run deployment:
+   ```powershell
+   # Windows
+   .\deploy.ps1
+
+   # Linux/Mac
+   chmod +x deploy.sh && ./deploy.sh
+   ```
+
+#### Frontend Deployment (Firebase Hosting)
+
+1. Update `.env.local` with your backend URL:
    ```bash
-   ./deploy.sh
+   NEXT_PUBLIC_API_URL=https://your-backend-url.run.app
+   ```
+
+2. Build and deploy:
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   firebase deploy --only hosting
    ```
 
 ## API Endpoints
@@ -182,13 +231,96 @@ NEXT_PUBLIC_API_BASE_URL=your_backend_url
 - Input validation is performed on all user-submitted data
 - CORS is configured for secure cross-origin requests
 
-## Contributing
+## Design Decisions & Trade-offs
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a pull request
+### Architecture Decisions
+1. **Async Processing with BackgroundTasks**: Chose FastAPI's `BackgroundTasks` over Cloud Tasks/Pub-Sub for simplicity. The job immediately returns a jobId while processing happens asynchronously.
+
+2. **Firestore Over SQL**: Used Firestore for seamless Firebase integration and real-time capabilities, avoiding additional database setup.
+
+3. **Enhanced Response Format**: Extended the required OpenAI response to include sentiment scores (positiveScore, neutralScore, negativeScore) for better UX visualization with progress bars.
+
+4. **Client-Side Polling**: Used manual refresh buttons instead of WebSockets/real-time listeners to keep the architecture simple and avoid additional infrastructure.
+
+5. **Docker + Cloud Run**: Containerized the FastAPI app for consistent deployments and easy scaling on Cloud Run.
+
+### Trade-offs
+- **No Real-Time Updates**: Users must manually refresh to see completed jobs (simplicity over real-time)
+- **In-Memory Job Queue**: Using BackgroundTasks means jobs are lost if the container restarts (acceptable for demo, would use Cloud Tasks in production)
+- **Service Account in Container**: Bundled service account key in Docker image for simplicity (would use Workload Identity in production)
+
+## Project Timeline & Development Approach
+
+### Total Time: ~8-10 hours
+
+#### Time Breakdown:
+1. **Initial Setup (1.5 hours)**
+   - Created Next.js frontend with TypeScript
+   - Setup FastAPI backend structure
+   - Configured Firebase Auth & Firestore
+   - Docker configuration
+
+2. **Backend Development (2.5 hours)**
+   - Implemented protected API endpoints
+   - OpenAI structured output integration
+   - Background job processing with error handling
+   - Firebase Admin SDK setup
+
+3. **Frontend Development (3 hours)**
+   - Authentication flow (login/signup)
+   - Dashboard with text submission
+   - Job list with status indicators
+   - Results display with sentiment visualization
+   - Responsive UI with Tailwind & shadcn/ui
+
+4. **Deployment & DevOps (1.5 hours)**
+   - Cloud Run deployment with environment variables
+   - Firebase Hosting setup
+   - CORS configuration
+   - Deployment scripts
+
+5. **Bug Fixes & Polish (1.5 hours)**
+   - Fixed httpx/OpenAI compatibility issues
+   - Environment variable debugging
+   - UI/UX improvements
+   - Documentation
+
+## AI Assistant Usage
+
+**Extensive use of Claude AI (Claude Code) throughout development:**
+
+### How AI Was Used:
+1. **Code Generation (~40%)**
+   - Boilerplate for FastAPI routes and Pydantic models
+   - React components and TypeScript interfaces
+   - Docker and deployment scripts
+
+2. **Debugging & Problem Solving (~30%)**
+   - Resolved OpenAI/httpx version compatibility issues
+   - Fixed CORS and authentication problems
+   - Cloud Run deployment errors
+
+3. **Best Practices & Architecture (~20%)**
+   - Suggested BackgroundTasks for async processing
+   - Recommended error handling patterns
+   - Security considerations (token verification, input validation)
+
+4. **Documentation (~10%)**
+   - README structure and content
+   - Code comments and inline documentation
+
+### AI Workflow:
+- **Iterative Development**: Used AI to generate initial code, then refined based on testing
+- **Error Resolution**: Copied error logs to AI for quick diagnosis and solutions
+- **Code Review**: Asked AI to review code for security issues and improvements
+- **Learning**: Used AI to understand Next.js 14 App Router patterns (new to me)
+
+**Key Insight**: AI accelerated development by ~3-4x, especially for boilerplate, debugging, and learning new patterns. However, critical thinking and manual testing were essential for production-ready code.
+
+## Live Deployment
+
+- **Frontend**: https://kai-developer-test.web.app
+- **Backend API**: https://kai-backend-eh4pzlsddq-uc.a.run.app
 
 ## License
 

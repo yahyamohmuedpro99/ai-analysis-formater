@@ -8,16 +8,18 @@ from firebase_admin_config import db
 from openai_service import analyze_text
 from auth import verify_firebase_token
 import os
+import firebase_admin.firestore as firestore
 
 app = FastAPI(title="AI Text Analysis API", version="1.0.0")
 
 # Add CORS middleware to allow requests from the frontend
+print("DEBUG: Setting up CORS middleware", os.getenv('FRONTEND_URL'))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for debugging
+    allow_origins=[os.getenv('FRONTEND_URL'),'https://kai-developer-test.web.app','localhost:3000','http://localhost:3000'],  
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Allow all headers for debugging
+    allow_headers=["*"],  
 )
 
 # Health check endpoint
@@ -112,7 +114,7 @@ async def get_user_jobs(
             raise HTTPException(status_code=403, detail="Access denied")
 
         # Query Firestore for user's jobs with proper pagination
-        jobs_query = db.collection("jobs").where("userId", "==", user_id)
+        jobs_query = db.collection("jobs").where(filter=firestore.FieldFilter("userId", "==", user_id))
 
         # For search queries, we need to fetch all and filter (simplified approach)
         if search:
@@ -160,6 +162,28 @@ async def get_user_jobs(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+# Protected endpoint to get a single job
+@app.get("/api/job/{job_id}")
+async def get_single_job(
+    job_id: str,
+    current_user_id: str = Depends(verify_firebase_token)
+):
+    # Get the job to verify ownership
+    job_ref = db.collection("jobs").document(job_id)
+    job_doc = job_ref.get()
+
+    if not job_doc.exists:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job_data = job_doc.to_dict()
+
+    # Verify that the user owns this job
+    if job_data["userId"] != current_user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    job_data["id"] = job_id
+    return job_data
+
 # Protected endpoint to delete a job
 @app.delete("/api/jobs/{job_id}")
 async def delete_job(
@@ -169,19 +193,19 @@ async def delete_job(
     # Get the job to verify ownership
     job_ref = db.collection("jobs").document(job_id)
     job_doc = job_ref.get()
-    
+
     if not job_doc.exists:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job_data = job_doc.to_dict()
-    
+
     # Verify that the user owns this job
     if job_data["userId"] != current_user_id:
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     # Delete the job
     job_ref.delete()
-    
+
     return {"message": "Job deleted successfully"}
 
 if __name__ == "__main__":

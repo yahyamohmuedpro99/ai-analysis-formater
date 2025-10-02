@@ -1,0 +1,8 @@
+# Backend gitignore
+*.pyc
+__pycache__/
+venv/
+.env
+*.json
+!package.json
+.DS_Store
