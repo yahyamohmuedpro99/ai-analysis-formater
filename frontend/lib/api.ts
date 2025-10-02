@@ -8,6 +8,9 @@ export interface TextAnalysisRequest {
 export interface TextAnalysisResponse {
   summary: string;
   sentiment: string;
+  positiveScore: number;
+  neutralScore: number;
+  negativeScore: number;
   keywords: string[];
 }
 
@@ -89,7 +92,7 @@ export async function deleteJob(jobId: string, token: string): Promise<void> {
   }
 }
 
-export async function getUserJobs(userId: string, token: string, page: number = 1, limit: number = 10, search: string = ''): Promise<JobsResponse> {
+export async function getUserJobs(userId: string, token: string, page: number = 1, limit: number = 5, search: string = ''): Promise<JobsResponse> {
   try {
     const params = new URLSearchParams();
     params.append('page', page.toString());

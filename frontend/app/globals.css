@@ -3,17 +3,58 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
+  --foreground-rgb: 55, 65, 81;
+  --background-start-rgb: 241, 245, 249;
   --background-end-rgb: 255, 255, 255;
+  --background-color: 255, 255, 255;
+
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+.dark {
+  --foreground-rgb: 241, 245, 249;
+  --background-start-rgb: 17, 24, 39;
+  --background-end-rgb: 30, 58, 138;
+  --background-color: 17, 24, 39;
+
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 94.1%;
 }
 
 body {
@@ -24,4 +65,121 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ensure all elements respect dark mode */
+.dark body,
+.dark html {
+  background-color: rgb(var(--background-color));
+}
+
+.dark .bg-white {
+  background-color: rgb(30, 41, 59); /* slate-800 - main cards */
+  color: rgb(241, 245, 249); /* off-white for headings */
+}
+
+.dark .bg-slate-700 {
+  background-color: rgb(51, 65, 85); /* slate-700 - secondary cards */
+}
+
+.dark .text-gray-900 {
+  color: rgb(241, 245, 249); /* off-white for headings */
+}
+
+.dark .text-muted-foreground {
+  color: rgb(148, 163, 184); /* slate-400 for body text */
+}
+
+.dark .border-slate-200 {
+  border-color: rgba(255, 255, 255, 0.05); /* subtle borders */
+}
+
+.dark .bg-gradient-to-br {
+  background: linear-gradient(135deg, rgb(99, 102, 241), rgb(139, 92, 246)); /* indigo to violet gradient */
+}
+
+.dark .shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dark .backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+@layer utilities {
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+    background-size: 400% 400%;
+  }
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
+  }
+  .animate-stagger {
+    animation: fadeInUp 0.8s ease-out;
+  }
+  .glow-effect {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+  .glow-effect:hover {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+  }
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

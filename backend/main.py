@@ -14,24 +14,10 @@ app = FastAPI(title="AI Text Analysis API", version="1.0.0")
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://localhost:3001",  # Alternative dev port
-        "http://127.0.0.1:3000",  # Alternative localhost
-        "http://127.0.0.1:3001",
-        "http://localhost:3000",  # Explicit for HTTPS if needed
-    ],
+    allow_origins=["*"],  # Allow all origins for debugging
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "authorization",
-        "content-type",
-        "accept",
-        "origin",
-        "user-agent",
-        "accept-encoding",
-        "accept-language"
-    ],
+    allow_headers=["*"],  # Allow all headers for debugging
 )
 
 # Health check endpoint
@@ -56,7 +42,7 @@ async def analyze_text_endpoint(
     # Validate text length
     if len(request.text) > 20000:
         raise HTTPException(status_code=400, detail="Text exceeds maximum length of 20000 characters")
-    
+
     # Create a new job document
     job_data = {
         "userId": user_id,
@@ -64,39 +50,50 @@ async def analyze_text_endpoint(
         "status": "pending",
         "createdAt": datetime.utcnow()
     }
-    
+
     # Add job to Firestore
     job_ref = db.collection("jobs").document()
     job_ref.set(job_data)
     job_id = job_ref.id
-    
+
     # Process the analysis in the background
     background_tasks.add_task(process_analysis, job_id, request.text, user_id)
-    
+
     # Return job ID immediately
     return {"jobId": job_id}
 
 # Background task to process the analysis
 async def process_analysis(job_id: str, text: str, user_id: str):
+    print(f"DEBUG: Starting background processing for job {job_id}")
     try:
         # Perform the analysis using OpenAI
+        print(f"DEBUG: Calling analyze_text for job {job_id}")
         result = analyze_text(text)
-        
+        print(f"DEBUG: Got result for job {job_id}: {result}")
+
         # Update job with results
         job_ref = db.collection("jobs").document(job_id)
-        job_ref.update({
+        update_data = {
             "status": "completed",
             "completedAt": datetime.utcnow(),
             "result": result.dict()
-        })
+        }
+        print(f"DEBUG: Updating job {job_id} with: {update_data}")
+        job_ref.update(update_data)
+        print(f"DEBUG: Successfully completed job {job_id}")
     except Exception as e:
+        print(f"DEBUG: Error processing job {job_id}: {str(e)}")
         # Update job with error status
-        job_ref = db.collection("jobs").document(job_id)
-        job_ref.update({
-            "status": "failed",
-            "completedAt": datetime.utcnow()
-        })
-        print(f"Error processing job {job_id}: {str(e)}")
+        try:
+            job_ref = db.collection("jobs").document(job_id)
+            job_ref.update({
+                "status": "failed",
+                "completedAt": datetime.utcnow(),
+                "error": str(e)
+            })
+            print(f"DEBUG: Marked job {job_id} as failed")
+        except Exception as update_error:
+            print(f"DEBUG: Failed to update job {job_id} status: {str(update_error)}")
 
 # Protected endpoint to get all user's jobs
 @app.get("/api/jobs/{user_id}")
@@ -104,46 +101,64 @@ async def get_user_jobs(
     user_id: str,
     current_user_id: str = Depends(verify_firebase_token),
     page: int = 1,
-    limit: int = 10,
+    limit: int = 5,
     search: str = ""
 ):
-    # Verify that the user is requesting their own jobs
-    if user_id != current_user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Query Firestore for user's jobs
-    jobs_query = db.collection("jobs").where("userId", "==", user_id)
-    
-    # If search term is provided, filter jobs
-    if search:
-        # Note: This is a simplified search implementation
-        # In production, you might want to use Firestore's full-text search capabilities
-        pass  # Search implementation would go here
-    
-    # Get all jobs first (we'll implement proper pagination later)
-    jobs_docs = jobs_query.stream()
+    try:
+        print(f"DEBUG: Getting jobs for user {user_id}, page {page}, limit {limit}")
 
-    jobs = []
-    for doc in jobs_docs:
-        job_data = doc.to_dict()
-        job_data["id"] = doc.id
-        
-        # Apply search filter if provided
-        if search and search.lower() not in job_data["text"].lower():
-            continue
-            
-        jobs.append(job_data)
+        # Verify that the user is requesting their own jobs
+        if user_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
-    # Sort jobs by createdAt in descending order
-    jobs.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
-    
-    # Implement pagination
-    total = len(jobs)
-    start_index = (page - 1) * limit
-    end_index = start_index + limit
-    paginated_jobs = jobs[start_index:end_index]
-    
-    return {"jobs": paginated_jobs, "total": total}
+        # Query Firestore for user's jobs with proper pagination
+        jobs_query = db.collection("jobs").where("userId", "==", user_id)
+
+        # For search queries, we need to fetch all and filter (simplified approach)
+        if search:
+            print(f"DEBUG: Search query: {search}")
+            # Fetch all jobs for search (inefficient but works for now)
+            all_jobs_docs = jobs_query.order_by("createdAt", direction="DESCENDING").stream()
+            jobs = []
+            for doc in all_jobs_docs:
+                job_data = doc.to_dict()
+                if search.lower() in job_data["text"].lower():
+                    job_data["id"] = doc.id
+                    jobs.append(job_data)
+
+            # Apply pagination to filtered results
+            total = len(jobs)
+            start_index = (page - 1) * limit
+            end_index = start_index + limit
+            paginated_jobs = jobs[start_index:end_index]
+        else:
+            # No search - use simple approach for now (fetch all and paginate in memory)
+            print(f"DEBUG: Fetching all jobs for pagination")
+            all_jobs_docs = jobs_query.stream()
+
+            jobs = []
+            for doc in all_jobs_docs:
+                job_data = doc.to_dict()
+                job_data["id"] = doc.id
+                jobs.append(job_data)
+
+            # Sort jobs by createdAt in descending order
+            jobs.sort(key=lambda x: x.get("createdAt", ""), reverse=True)
+
+            # Apply pagination
+            total = len(jobs)
+            start_index = (page - 1) * limit
+            end_index = start_index + limit
+            paginated_jobs = jobs[start_index:end_index]
+
+        print(f"DEBUG: Returning {len(paginated_jobs)} jobs, total estimated: {total}")
+        return {"jobs": paginated_jobs, "total": total}
+
+    except Exception as e:
+        print(f"DEBUG: Error in get_user_jobs: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # Protected endpoint to delete a job
 @app.delete("/api/jobs/{job_id}")

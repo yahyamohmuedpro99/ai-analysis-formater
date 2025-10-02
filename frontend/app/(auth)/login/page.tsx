@@ -33,7 +33,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:px-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-blue-900 py-8 px-4 sm:px-6">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center">
           <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow mb-4">

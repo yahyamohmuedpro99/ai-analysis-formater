@@ -8,6 +8,9 @@ class TextAnalysisRequest(BaseModel):
 class TextAnalysisResponse(BaseModel):
     summary: str
     sentiment: str  # "positive" | "negative" | "neutral"
+    positiveScore: int  # 0-100
+    neutralScore: int   # 0-100
+    negativeScore: int  # 0-100
     keywords: List[str]
 
 class JobDocument(BaseModel):
