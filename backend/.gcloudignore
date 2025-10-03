@@ -1,0 +1,7 @@
+# Cloud Build Ignore File
+# Files and directories to ignore when submitting a build
+.git/
+.gitignore
+
+# Do not ignore the service account key
+!serviceAccountKey.json

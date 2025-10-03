@@ -6,9 +6,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Python application files
-COPY *.py ./
-COPY serviceAccountKey.json ./
+# Copy application files
+COPY main.py .
+COPY src/ ./src/
+COPY serviceAccountKey.json .
 
 # Set environment variables
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/serviceAccountKey.json

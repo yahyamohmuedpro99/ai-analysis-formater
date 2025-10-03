@@ -60,9 +60,7 @@ try {
       --platform managed `
       --region $REGION `
       --allow-unauthenticated `
-      --set-env-vars FIRESTORE_DATABASE_ID=yahya-database `
-      --set-env-vars PROJECT_ID=$PROJECT_ID `
-      --set-env-vars OPENAI_API_KEY=$env:OPENAI_API_KEY `
+      --set-env-vars "FIRESTORE_DATABASE_ID=yahya-database,PROJECT_ID=$PROJECT_ID,OPENAI_API_KEY=$env:OPENAI_API_KEY" `
       --service-account=firebase-adminsdk-fbsvc@kai-developer-test.iam.gserviceaccount.com `
       --max-instances=10 `
       --memory=512Mi `

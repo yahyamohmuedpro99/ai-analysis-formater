@@ -2,7 +2,7 @@ import openai
 import os
 import logging
 import time
-from models import TextAnalysisResponse
+from .models import TextAnalysisResponse
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -22,7 +22,15 @@ def analyze_text(text: str, mode: str = "simple") -> TextAnalysisResponse:
     # Select model and prompt based on mode
     if mode == "deep":
         model = "gpt-4o-2024-08-06"
-        system_prompt = """You are an expert text analyst with deep understanding of language, context, and nuance. Your analysis should be comprehensive and insightful.
+        system_prompt = """You are an expert text analyst with deep understanding of language, context, and nuance.
+
+CRITICAL INSTRUCTIONS:
+1. sentiment field: Return ONLY ONE WORD - either "positive", "negative", or "neutral". NO explanations, NO additional text.
+2. summary field: Provide a comprehensive 2-3 sentence analysis that includes:
+   - The overall emotional tone and why
+   - Main themes and key insights
+   - Contextual nuances, irony, sarcasm, or cultural elements if present
+   - What makes this text significant
 
 For sentiment analysis:
 - Detect subtle emotional undertones, implicit meanings, and contextual sentiment shifts
@@ -34,21 +42,22 @@ For keywords:
 - Include abstract concepts, themes, and core ideas
 - Prioritize conceptual significance over word frequency
 
-For summary:
-- Capture the essence, main argument, and key insights in 2-3 sentences
-- Preserve critical context and nuance
-- Highlight what makes this text significant or unique
-
 Ensure sentiment scores (positiveScore, neutralScore, negativeScore) add up to exactly 100, and provide exactly 5 keywords."""
     else:
         model = "gpt-4o-mini"
-        system_prompt = """You are a helpful text analysis assistant. Provide clear, straightforward analysis.
+        system_prompt = """You are a helpful text analysis assistant.
+
+CRITICAL INSTRUCTIONS:
+1. sentiment field: Return ONLY ONE WORD - either "positive", "negative", or "neutral". NO explanations, NO additional text.
+2. summary field: Provide a 1-2 sentence summary covering:
+   - Main points of the text
+   - Overall emotional tone and key takeaways
 
 Provide:
-1) A concise summary (1-2 sentences) covering the main points
-2) Overall sentiment (positive/negative/neutral) with percentage scores
-3) Sentiment scores (positiveScore, neutralScore, negativeScore) that add up to exactly 100
-4) Exactly 5 relevant keywords that appear in or relate to the text
+- Overall sentiment as a SINGLE WORD (positive/negative/neutral)
+- Sentiment scores (positiveScore, neutralScore, negativeScore) that add up to exactly 100
+- Exactly 5 relevant keywords that appear in or relate to the text
+- A concise summary with the main points
 
 Keep the analysis simple, direct, and accurate."""
 
