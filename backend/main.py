@@ -9,6 +9,10 @@ from openai_service import analyze_text
 from auth import verify_firebase_token
 import os
 import firebase_admin.firestore as firestore
+import feedparser
+import random
+from bs4 import BeautifulSoup
+import httpx
 
 app = FastAPI(title="AI Text Analysis API", version="1.0.0")
 
@@ -42,13 +46,14 @@ async def analyze_text_endpoint(
     print(f"DEBUG: Received analysis request from user: {user_id}")
     print(f"DEBUG: Text length: {len(request.text)}")
     # Validate text length
-    if len(request.text) > 20000:
-        raise HTTPException(status_code=400, detail="Text exceeds maximum length of 20000 characters")
+    if len(request.text) > 100000:
+        raise HTTPException(status_code=400, detail="Text exceeds maximum length of 100000 characters")
 
     # Create a new job document
     job_data = {
         "userId": user_id,
         "text": request.text,
+        "mode": request.mode,
         "status": "pending",
         "createdAt": datetime.utcnow()
     }
@@ -59,18 +64,18 @@ async def analyze_text_endpoint(
     job_id = job_ref.id
 
     # Process the analysis in the background
-    background_tasks.add_task(process_analysis, job_id, request.text, user_id)
+    background_tasks.add_task(process_analysis, job_id, request.text, user_id, request.mode)
 
     # Return job ID immediately
     return {"jobId": job_id}
 
 # Background task to process the analysis
-async def process_analysis(job_id: str, text: str, user_id: str):
-    print(f"DEBUG: Starting background processing for job {job_id}")
+async def process_analysis(job_id: str, text: str, user_id: str, mode: str = "simple"):
+    print(f"DEBUG: Starting background processing for job {job_id} in {mode} mode")
     try:
         # Perform the analysis using OpenAI
         print(f"DEBUG: Calling analyze_text for job {job_id}")
-        result = analyze_text(text)
+        result = analyze_text(text, mode)
         print(f"DEBUG: Got result for job {job_id}: {result}")
 
         # Update job with results
@@ -207,6 +212,122 @@ async def delete_job(
     job_ref.delete()
 
     return {"message": "Job deleted successfully"}
+
+# Public endpoint to get random article from RSS feed
+@app.get("/api/rss/random-article")
+async def get_random_rss_article():
+    """Fetch a random article from Paul Graham's essay RSS feed and scrape the full content"""
+    rss_url = "http://www.aaronsw.com/2002/feeds/pgessays.rss"
+
+    try:
+        # Parse the RSS feed
+        feed = feedparser.parse(rss_url)
+
+        if not feed.entries:
+            raise HTTPException(status_code=404, detail="No articles found in RSS feed")
+
+        # Get a random entry
+        random_entry = random.choice(feed.entries)
+        article_url = random_entry.get('link', '')
+
+        if not article_url:
+            raise HTTPException(status_code=404, detail="Article link not found")
+
+        # Fetch the full article content from the link
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(article_url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Failed to fetch article")
+
+            # Parse HTML content
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Remove script and style elements
+            for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                script.decompose()
+
+            # Get text content
+            text = soup.get_text()
+
+            # Clean up text
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            text_content = '\n'.join(chunk for chunk in chunks if chunk)
+
+            # Limit to 100k characters
+            if len(text_content) > 100000:
+                text_content = text_content[:100000]
+
+        return {
+            "title": random_entry.get('title', 'No title'),
+            "link": article_url,
+            "text": text_content.strip(),
+            "published": random_entry.get('published', '')
+        }
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Request timed out while fetching the article")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Error fetching article: {str(e)}")
+    except Exception as e:
+        print(f"Error fetching RSS article: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch RSS article: {str(e)}")
+
+# Public endpoint to scrape text from a URL
+@app.get("/api/scrape")
+async def scrape_url(url: str):
+    """Scrape text content from a given URL"""
+
+    if not url or not url.startswith(('http://', 'https://')):
+        raise HTTPException(status_code=400, detail="Invalid URL provided")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            })
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Failed to fetch URL: HTTP {response.status_code}")
+
+            # Parse HTML content
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Remove script and style elements
+            for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                script.decompose()
+
+            # Get text content
+            text = soup.get_text()
+
+            # Clean up text
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            text = '\n'.join(chunk for chunk in chunks if chunk)
+
+            # Limit to 100k characters
+            if len(text) > 100000:
+                text = text[:100000]
+
+            if not text or len(text.strip()) < 50:
+                raise HTTPException(status_code=422, detail="Could not extract meaningful text from the URL")
+
+            return {
+                "text": text.strip(),
+                "url": url,
+                "length": len(text.strip())
+            }
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Request timed out while fetching the URL")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Error fetching URL: {str(e)}")
+    except Exception as e:
+        print(f"Error scraping URL: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to scrape URL. The website may be blocking automated access or the content may not be accessible.")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

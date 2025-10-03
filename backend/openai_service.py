@@ -11,21 +11,55 @@ load_dotenv()
 # Initialize OpenAI client
 client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def analyze_text(text: str) -> TextAnalysisResponse:
+def analyze_text(text: str, mode: str = "simple") -> TextAnalysisResponse:
     """
     Analyze text using OpenAI API and return structured output with retry logic
+    mode: "simple" uses gpt-4o-mini, "deep" uses gpt-4o for more sophisticated analysis
     """
     max_retries = 3
     base_delay = 1  # seconds
 
+    # Select model and prompt based on mode
+    if mode == "deep":
+        model = "gpt-4o-2024-08-06"
+        system_prompt = """You are an expert text analyst with deep understanding of language, context, and nuance. Your analysis should be comprehensive and insightful.
+
+For sentiment analysis:
+- Detect subtle emotional undertones, implicit meanings, and contextual sentiment shifts
+- Consider cultural context, irony, sarcasm, and rhetorical devices
+- Provide nuanced sentiment scores that reflect the complexity of human expression
+
+For keywords:
+- Extract the 5 most semantically important concepts, not just frequent words
+- Include abstract concepts, themes, and core ideas
+- Prioritize conceptual significance over word frequency
+
+For summary:
+- Capture the essence, main argument, and key insights in 2-3 sentences
+- Preserve critical context and nuance
+- Highlight what makes this text significant or unique
+
+Ensure sentiment scores (positiveScore, neutralScore, negativeScore) add up to exactly 100, and provide exactly 5 keywords."""
+    else:
+        model = "gpt-4o-mini"
+        system_prompt = """You are a helpful text analysis assistant. Provide clear, straightforward analysis.
+
+Provide:
+1) A concise summary (1-2 sentences) covering the main points
+2) Overall sentiment (positive/negative/neutral) with percentage scores
+3) Sentiment scores (positiveScore, neutralScore, negativeScore) that add up to exactly 100
+4) Exactly 5 relevant keywords that appear in or relate to the text
+
+Keep the analysis simple, direct, and accurate."""
+
     for attempt in range(max_retries):
         try:
-            print(f"DEBUG: Starting analysis for text length: {len(text)} (attempt {attempt + 1}/{max_retries})")
+            print(f"DEBUG: Starting {mode} analysis for text length: {len(text)} using {model} (attempt {attempt + 1}/{max_retries})")
 
             response = client.beta.chat.completions.parse(
-                model="gpt-4o-2024-08-06",
+                model=model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that analyzes text and provides structured output. Always provide: 1) A concise summary (one sentence, max 2 sentences), 2) Overall sentiment (positive/negative/neutral), 3) Sentiment scores as percentages (positiveScore, neutralScore, negativeScore that add up to 100), 4) EXACTLY 5 relevant keywords. Make sure the three sentiment scores add up to exactly 100 and provide exactly 5 keywords, no more, no less."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Please analyze this text:\n\n{text}"}
                 ],
                 response_format=TextAnalysisResponse,

@@ -25,7 +25,7 @@ export default function AnalysisDetailPage() {
 
   useEffect(() => {
     if (!id) {
-      router.push('/dashboard');
+      router.push('/playground');
       return;
     }
 
@@ -47,7 +47,7 @@ export default function AnalysisDetailPage() {
             description: "Failed to load analysis details. Please try again.",
             variant: "destructive",
           });
-          router.push('/dashboard');
+          router.push('/playground');
         } finally {
           setLoading(false);
         }

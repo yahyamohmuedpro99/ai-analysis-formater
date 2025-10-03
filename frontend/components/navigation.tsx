@@ -3,31 +3,38 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { LayoutDashboard, History, Settings } from "lucide-react";
 
 export function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "History", href: "/history" },
-    { name: "Settings", href: "/settings" },
+    { name: "Playground", href: "/playground", icon: LayoutDashboard },
+    { name: "History", href: "/history", icon: History },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
     <nav className="flex space-x-2">
-      {navItems.map((item) => (
-        <Button
-          key={item.href}
-          variant={pathname === item.href ? "default" : "ghost"}
-          className={`${pathname === item.href 
-            ? "bg-white text-purple-600 hover:bg-slate-100 dark:bg-slate-200 dark:text-purple-800" 
-            : "text-white hover:bg-white/20 dark:text-slate-200"
-          }`}
-          asChild
-        >
-          <Link href={item.href}>{item.name}</Link>
-        </Button>
-      ))}
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Button
+            key={item.href}
+            variant={pathname === item.href ? "default" : "ghost"}
+            className={`${pathname === item.href
+              ? "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              : "text-gray-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+            }`}
+            asChild
+          >
+            <Link href={item.href} className="flex items-center gap-2">
+              <Icon className="h-4 w-4" />
+              {item.name}
+            </Link>
+          </Button>
+        );
+      })}
     </nav>
   );
 }

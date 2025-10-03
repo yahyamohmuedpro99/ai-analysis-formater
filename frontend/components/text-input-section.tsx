@@ -6,17 +6,24 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Link as LinkIcon, Loader2, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
+import { getRandomRSSArticle, scrapeUrl } from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
 
 interface TextInputSectionProps {
-  onAnalyze: (text: string) => void;
+  onAnalyze: (text: string, mode: string) => void;
   isAnalyzing: boolean;
 }
 
 export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionProps) {
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
+  const [mode, setMode] = useState<"simple" | "deep">("simple");
+  const [urlInput, setUrlInput] = useState("");
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+  const [isLoadingRSS, setIsLoadingRSS] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -46,9 +53,54 @@ export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionPro
     }
   };
 
-  const handleTryExample = () => {
-    const exampleText = "Artificial intelligence is transforming the world in unprecedented ways. From healthcare to transportation, AI is revolutionizing industries and improving efficiency. However, it also raises important ethical questions about privacy, bias, and the future of work. As we continue to develop these technologies, it's crucial that we consider both the benefits and potential risks.";
-    setText(exampleText);
+  const handleTryExample = async () => {
+    setIsLoadingRSS(true);
+    try {
+      const article = await getRandomRSSArticle();
+      setText(article.text);
+      toast({
+        title: "Example Loaded",
+        description: article.title || "Random article loaded successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load example article",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingRSS(false);
+    }
+  };
+
+  const handleLoadUrl = async () => {
+    if (!urlInput.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoadingUrl(true);
+    try {
+      const result = await scrapeUrl(urlInput);
+      setText(result.text);
+      toast({
+        title: "URL Loaded",
+        description: `Extracted ${result.length} characters from the webpage`,
+      });
+      setUrlInput("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to scrape URL",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingUrl(false);
+    }
   };
 
   const handleAnalyze = () => {
@@ -61,21 +113,21 @@ export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionPro
       return;
     }
 
-    if (text.length > 20000) {
+    if (text.length > 100000) {
       toast({
         title: "Error",
-        description: "Text exceeds maximum length of 20,000 characters",
+        description: "Text exceeds maximum length of 100,000 characters",
         variant: "destructive",
       });
       return;
     }
 
-    onAnalyze(text);
+    onAnalyze(text, mode);
   };
 
   const getCharacterCountColor = () => {
-    if (text.length > 18000) return "text-red-600 dark:text-red-400";
-    if (text.length > 15000) return "text-yellow-600 dark:text-yellow-400";
+    if (text.length > 90000) return "text-red-600 dark:text-red-400";
+    if (text.length > 75000) return "text-yellow-600 dark:text-yellow-400";
     return "text-green-600 dark:text-green-400";
   };
 
@@ -86,6 +138,104 @@ export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionPro
         <CardDescription className="dark:text-slate-400">Enter or upload text for AI analysis</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Analysis Mode Toggle */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex-1">
+            <Label htmlFor="mode-toggle" className="text-sm font-medium dark:text-slate-200">
+              {mode === "simple" ? "Simple Analysis" : "Deep Analysis"}
+            </Label>
+            <p className="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+              {mode === "simple"
+                ? "Fast analysis with GPT-4o-mini - straightforward insights"
+                : "Comprehensive analysis with GPT-4o - nuanced & detailed insights"}
+            </p>
+          </div>
+          <Switch
+            id="mode-toggle"
+            checked={mode === "deep"}
+            onCheckedChange={(checked) => setMode(checked ? "deep" : "simple")}
+            className="ml-4"
+          />
+        </div>
+
+        {/* Quick Load Options */}
+        <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <Globe className="h-4 w-4" />
+            <span>Quick Load Options</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Load from URL */}
+            <div className="space-y-2">
+              <Label htmlFor="url-input" className="text-xs dark:text-slate-300 flex items-center gap-1">
+                <LinkIcon className="h-3 w-3" />
+                Paste a URL
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="url-input"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://example.com/article"
+                  className="dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleLoadUrl()}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLoadUrl}
+                  disabled={isLoadingUrl || !urlInput.trim()}
+                  className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 shrink-0"
+                >
+                  {isLoadingUrl ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Load"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Random Example */}
+            <div className="space-y-2">
+              <Label className="text-xs dark:text-slate-300 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                Or try a random essay
+              </Label>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleTryExample}
+                disabled={isLoadingRSS}
+                className="w-full dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                {isLoadingRSS ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading essay...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Load Random Essay
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-slate-200 dark:border-slate-700"></span>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white dark:bg-slate-800 px-2 text-muted-foreground dark:text-slate-400">Or enter text manually</span>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="text-input" className="dark:text-slate-300">Enter your text</Label>
           <Textarea
@@ -100,7 +250,7 @@ export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionPro
               AI-powered analysis includes sentiment, keywords, and summaries
             </div>
             <Badge variant="outline" className={`${getCharacterCountColor()} text-lg font-semibold px-3 py-1`}>
-              {text.length}/20000
+              {text.length}/100000
             </Badge>
           </div>
         </div>
@@ -118,13 +268,10 @@ export function TextInputSection({ onAnalyze, isAnalyzing }: TextInputSectionPro
             onClick={() => fileInputRef.current?.click()}
             className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           >
-            {fileName ? `File: ${fileName}` : "Upload File"}
+            {fileName ? `📄 ${fileName}` : "📁 Upload File"}
           </Button>
           <Button variant="outline" onClick={handleClear} className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
-            Clear
-          </Button>
-          <Button variant="outline" onClick={handleTryExample} className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
-            Try Example
+            🗑️ Clear
           </Button>
         </div>
 

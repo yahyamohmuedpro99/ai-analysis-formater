@@ -4,6 +4,7 @@ from datetime import datetime
 
 class TextAnalysisRequest(BaseModel):
     text: str
+    mode: str = "simple"  # "simple" | "deep"
 
 class TextAnalysisResponse(BaseModel):
     summary: str

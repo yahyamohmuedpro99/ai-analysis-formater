@@ -30,7 +30,7 @@ export function UserMenu() {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+        <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20">
           <User className="h-5 w-5" />
           <span className="sr-only">User menu</span>
         </Button>

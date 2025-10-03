@@ -3,6 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface TextAnalysisRequest {
   text: string;
+  mode?: string;
 }
 
 export interface TextAnalysisResponse {
@@ -29,7 +30,7 @@ export interface JobsResponse {
   total: number;
 }
 
-export async function analyzeText(text: string, token: string): Promise<{ jobId: string }> {
+export async function analyzeText(text: string, token: string, mode: string = "simple"): Promise<{ jobId: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: "POST",
@@ -37,7 +38,7 @@ export async function analyzeText(text: string, token: string): Promise<{ jobId:
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, mode })
     });
 
     if (!response.ok) {
@@ -146,6 +147,41 @@ export async function getSingleJob(jobId: string, token: string): Promise<Job> {
       } else {
         throw new Error(`Failed to fetch job: ${response.statusText}`);
       }
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Cannot connect to server at ${API_BASE_URL}. Please check if the server is running.`);
+    }
+    throw error;
+  }
+}
+
+export async function getRandomRSSArticle(): Promise<{ title: string; link: string; text: string; published: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/rss/random-article`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch random article: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Cannot connect to server at ${API_BASE_URL}. Please check if the server is running.`);
+    }
+    throw error;
+  }
+}
+
+export async function scrapeUrl(url: string): Promise<{ text: string; url: string; length: number }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrape?url=${encodeURIComponent(url)}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Failed to scrape URL: ${response.statusText}`);
     }
 
     return response.json();

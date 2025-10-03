@@ -18,7 +18,7 @@ export function NotificationBadge() {
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20 relative"
+          className="text-gray-700 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 relative"
         >
           <Bell className="h-5 w-5" />
           <span className="sr-only">Notifications</span>

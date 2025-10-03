@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, ArrowRight, CheckCircle } from 'lucide-react';
+import { AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
 
-export default function Signup() {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,8 +24,8 @@ export default function Signup() {
     setError('');
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push('/playground');
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password');
@@ -44,19 +44,19 @@ export default function Signup() {
       <div className="max-w-md w-full space-y-6 animate-fade-in-up">
         <div className="text-center">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg mb-4 animate-pulse-slow">
-            <span className="text-4xl">🧠</span>
+            <Sparkles className="text-white text-2xl h-8 w-8" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
-            Create Your Account
+            Welcome Back
           </h2>
           <p className="text-muted-foreground dark:text-slate-400">
-            Create Account to continue to your dashboard
+            Sign in to continue to your dashboard
           </p>
         </div>
 
         <Card className="border-2 shadow-xl dark:bg-slate-800 dark:border-slate-700">
           <CardHeader>
-            <CardTitle className="dark:text-slate-100">Sign Up</CardTitle>
+            <CardTitle className="dark:text-slate-100">Sign In</CardTitle>
             <CardDescription className="dark:text-slate-400">
               Enter your credentials to access your account
             </CardDescription>
@@ -114,7 +114,7 @@ export default function Signup() {
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
-                    Create Account
+                    Sign in
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </span>
                 )}

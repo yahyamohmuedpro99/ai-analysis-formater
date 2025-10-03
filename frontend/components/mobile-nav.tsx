@@ -18,7 +18,7 @@ export function MobileNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard" },
+    { name: "Playground", href: "/playground" },
     { name: "History", href: "/history" },
     { name: "Settings", href: "/settings" },
   ];
